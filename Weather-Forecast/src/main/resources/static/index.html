@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> <!-- Sets the character encoding for the document -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Ensures the site is mobile-responsive -->
+    <title>Weather Forecast</title>
+    <style> /* CSS styling/refinement of appearance */
+    body {
+            font-family: 'Arial', sans-serif;
+            background-color: #e9ecef;
+            color: #495057;
+            text-align: center;
+            padding-top: 50px;
+        }
+        .weather-container {
+            margin: auto;
+            max-width: 400px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .weather-form input[type="text"] {
+            padding: 10px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            width: calc(70% - 20px);
+        }
+        .weather-form button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .weather-form button:hover {
+            background-color: #0056b3;
+        }
+        .weather-result {
+            text-align: left;
+            margin-top: 20px;
+        }
+        .weather-forecast {
+            margin-top: 20px;
+        }
+
+        .forecast-day {
+            border-bottom: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="weather-container">
+    <h1>Weather Forecast Application</h1>
+    <form id="weatherForm" class="weather-form">
+        <input type="text" id="cityName" name="city" placeholder="Enter city name">
+        <button type="submit">Get Weather</button> <!-- Button to trigger weather data fetch -->
+    </form>
+    <div id="weatherResult" class="weather-result">
+        <!-- Weather data will be displayed here -->
+    </div>
+    <div id="weeklyForecastResult" class="weather-forecast">
+        <!-- Weekly forecast data will be displayed here -->
+    </div>
+</div>
+
+<script>
+    //This listens for the event that the entire HTML document has been completely loaded and parsed.
+    document.addEventListener('DOMContentLoaded', function() {
+        var weatherForm = document.getElementById('weatherForm');
+
+        // Function to convert temperature from Celsius to Fahrenheit
+        function celsiusToFahrenheit(celsius) {
+            return Math.round((celsius * 9/5) + 32);
+        }
+
+        // Event listener to handle the submission request
+        weatherForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevents the default form submission action
+            var cityName = document.getElementById('cityName').value.trim(); //Retrieves and trims the city name entered in the form.
+
+            if (!cityName) {
+                alert('Please enter a city name.');
+                return;
+            }
+
+            fetch('/getWeather?city=' + cityName)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) { //In this block, the fetched data is used to create and display the weather information in the weatherResult div.
+                    var weatherDiv = document.getElementById('weatherResult');
+                    var weatherData = data.data[0];
+                    var weatherInfo = `
+                            <h2>Weather for ${weatherData.city_name}</h2>
+                            <p>Temperature: ${celsiusToFahrenheit(weatherData.temp)}°F</p>
+                            <p>Feels Like: ${celsiusToFahrenheit(weatherData.app_temp)}°F</p>
+                            <p>Humidity: ${weatherData.rh}%</p>
+                            <img src="https://www.weatherbit.io/static/img/icons/${weatherData.weather.icon}.png" alt="${weatherData.weather.description}">
+                            <p>Precipitation: ${weatherData.precip}mm</p>
+                            <p>Wind: ${weatherData.wind_spd}m/s ${weatherData.wind_cdir_full}</p>
+                            <p>Description: ${weatherData.weather.description}</p>
+                            <p>Sunrise: ${weatherData.sunrise}</p>
+                            <p>Sunset: ${weatherData.sunset}</p>
+                            <p>UV Index: ${weatherData.uv}</p>
+                        `;
+                    weatherDiv.innerHTML = weatherInfo;
+                })
+                .catch(function(error) {
+                    console.error('Error fetching weather:', error);
+                });
+
+            fetch('/getWeeklyForecast?city=' + cityName)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    var forecastDiv = document.getElementById('weeklyForecastResult');
+                    // Clear previous content
+                    forecastDiv.innerHTML = '';
+                    // Process and display each day's forecast
+                    data.data.forEach(day => {
+                        forecastDiv.innerHTML += `
+                <div class="forecast-day">
+                    <h3>${new Date(day.valid_date).toDateString()}</h3>
+                    <p>Max Temp: ${celsiusToFahrenheit(day.max_temp)}°F</p>
+                    <p>Min Temp: ${celsiusToFahrenheit(day.min_temp)}°F</p>
+                    <img src="https://www.weatherbit.io/static/img/icons/${day.weather.icon}.png" alt="${day.weather.description}">
+                    <p>${day.weather.description}</p>
+                </div>
+            `;
+                    });
+                })
+                .catch(function(error) {
+                    console.error('Error fetching weekly forecast:', error);
+                });
+
+        });
+    });
+</script>
+</body>
+</html>
